@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GENITUS SEKTOR-HEATMAP</title>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Rajdhani:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root{--bg:#f4f7fb;--surface:#ffffff;--panel:#ffffff;--border:#d9e2ec;--accent:#0e7490;--gold:#b45309;--green:#15803d;--red:#b91c1c;--muted:#52606d;--text:#1e293b;--bright:#0f172a;--mono:'Space Mono',monospace;--sans:'Rajdhani',sans-serif;}
+    :root.dark-theme{--bg:#080c10;--surface:#0d1117;--panel:#111820;--border:#1e2d3d;--accent:#00d4ff;--gold:#f0c040;--green:#00ff88;--red:#ff3b5c;--muted:#7d92a8;--text:#c8d8e8;--bright:#ffffff;}
+    *{margin:0;padding:0;box-sizing:border-box;}
+    body{background:var(--bg);color:var(--text);font-family:var(--sans);font-size:15px;min-height:100vh;transition:background .25s,color .25s;}
+    header{background:var(--surface);border-bottom:1px solid var(--border);padding:0 20px;display:flex;align-items:center;justify-content:space-between;height:56px;position:sticky;top:0;z-index:200;}
+    .logo{display:flex;align-items:center;gap:12px;}
+    .logo-mark{width:32px;height:32px;border:2px solid var(--accent);display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:14px;color:var(--accent);}
+    .logo-text{font-family:var(--mono);font-size:13px;letter-spacing:3px;color:var(--bright);}
+    .logo-sub{font-family:var(--mono);font-size:10px;letter-spacing:2px;color:var(--muted);display:block;margin-top:1px;}
+    #themeToggleBtn{background:none;border:1px solid var(--border);color:var(--accent);width:30px;height:30px;border-radius:2px;cursor:pointer;font-size:14px;}
+    .cache-badge{font-family:var(--mono);font-size:9px;letter-spacing:1px;padding:3px 8px;border:1px solid var(--accent);color:var(--accent);border-radius:2px;text-transform:uppercase;}
+    .toolbar{background:var(--surface);border-bottom:1px solid var(--border);padding:12px 20px;display:flex;flex-wrap:wrap;gap:10px;align-items:center;}
+    select{background:var(--bg);border:1px solid var(--border);color:var(--text);font-family:var(--mono);font-size:12px;padding:7px 10px;outline:none;border-radius:2px;}
+    .count-badge{font-family:var(--mono);font-size:11px;color:var(--muted);margin-left:auto;}
+    .main{max-width:1300px;margin:0 auto;padding:20px;}
+    .sector-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px;margin-bottom:24px;}
+    .sector-card{background:var(--surface);border:1px solid var(--border);border-radius:4px;padding:14px;cursor:pointer;transition:transform .1s, box-shadow .1s;}
+    .sector-card:hover{transform:translateY(-2px);box-shadow:0 4px 12px rgba(0,0,0,0.08);}
+    .sector-card.active{border-color:var(--accent);}
+    .sector-card .sc-name{font-family:var(--sans);font-weight:700;font-size:13px;color:var(--bright);margin-bottom:6px;}
+    .sector-card .sc-count{font-family:var(--mono);font-size:10px;color:var(--muted);margin-bottom:8px;}
+    .sector-card .sc-score{font-family:var(--mono);font-size:30px;font-weight:700;}
+    .sector-card .sc-metrics{display:flex;gap:10px;margin-top:8px;font-family:var(--mono);font-size:10px;color:var(--muted);}
+    .sector-card .sc-metrics span b{color:var(--text);}
+    .panel-block{background:var(--surface);border:1px solid var(--border);border-radius:3px;padding:16px;margin-bottom:18px;}
+    .panel-block h3{font-family:var(--mono);font-size:12px;letter-spacing:2px;color:var(--gold);text-transform:uppercase;margin-bottom:12px;}
+    table{width:100%;border-collapse:collapse;font-size:12px;}
+    th{font-family:var(--mono);font-size:9px;letter-spacing:1px;color:var(--muted);text-transform:uppercase;padding:7px 9px;text-align:right;border-bottom:1px solid var(--border);cursor:pointer;user-select:none;}
+    th:hover{color:var(--accent);}
+    th:first-child,th:nth-child(2){text-align:left;}
+    td{padding:6px 9px;border-bottom:1px solid rgba(125,146,168,0.15);text-align:right;font-family:var(--mono);font-size:11px;}
+    td:first-child{font-weight:700;color:var(--accent);text-align:left;}
+    td:nth-child(2){text-align:left;font-family:var(--sans);color:var(--muted);}
+    .score-pill{display:inline-block;min-width:34px;padding:2px 8px;border-radius:10px;font-weight:700;text-align:center;}
+    .score-green{background:rgba(21,128,61,0.15);color:var(--green);}
+    .score-gold{background:rgba(180,83,9,0.15);color:var(--gold);}
+    .score-red{background:rgba(185,28,28,0.15);color:var(--red);}
+    .loading-line{font-family:var(--mono);font-size:12px;color:var(--muted);text-align:center;padding:60px;}
+    .disclaimer{font-size:10px;color:var(--muted);line-height:1.6;border-top:1px solid var(--border);padding-top:10px;margin-top:6px;}
+  </style>
+</head>
+<body>
+<header>
+  <div class="logo"><div class="logo-mark">Σ</div><div><span class="logo-text">GENITUS</span><span class="logo-sub">SEKTOR-HEATMAP</span></div></div>
+  <div style="display:flex;align-items:center;gap:10px"><span class="cache-badge" id="cacheBadge">● lädt Cache...</span><button id="themeToggleBtn" title="Toggle theme">🌙</button></div>
+</header>
+<div class="toolbar">
+  <select id="sortSelect" onchange="renderSectors()">
+    <option value="score">Sortieren: Health-Score</option>
+    <option value="count">Sortieren: Anzahl Firmen</option>
+    <option value="pe">Sortieren: KGV (günstig zuerst)</option>
+    <option value="yield">Sortieren: Dividend-Yield</option>
+    <option value="roe">Sortieren: ROE</option>
+  </select>
+  <select id="indexFilterSelect" onchange="onFilterChange()">
+    <option value="ALL">Alle Indizes</option>
+  </select>
+  <span class="count-badge" id="countBadge"></span>
+</div>
+<div class="main" id="mainPanel">
+  <div class="loading-line">Lade Cache (Sektor-Auswertung ohne Live-Calls)...</div>
+</div>
+
+<script>
+  const BILANZ_DATA_URL = 'https://raw.githubusercontent.com/Babybounce500/genitus-ticker-cache/main/bilanz-data.json';
+
+  (function(){
+    const KEY='genitusTheme:sectorheatmap';
+    function applyTheme(t){ document.documentElement.classList.toggle('dark-theme', t==='dark'); localStorage.setItem(KEY,t); const btn=document.getElementById('themeToggleBtn'); if(btn) btn.textContent = t==='dark' ? '☀' : '🌙'; }
+    window.__theme = localStorage.getItem(KEY) || 'light';
+    applyTheme(window.__theme);
+    document.addEventListener('DOMContentLoaded', function(){ const btn=document.getElementById('themeToggleBtn'); if(btn) btn.addEventListener('click', function(){ window.__theme = window.__theme==='dark' ? 'light' : 'dark'; applyTheme(window.__theme); }); });
+  })();
+
+  // ── Ported 1:1 from Bilanz-Screener.html / core/ratios.py ──
+  const ROW_ALIASES = {
+    total_revenue: ["Total Revenue","TotalRevenue","Revenue","Total revenue"],
+    gross_profit: ["Gross Profit","GrossProfit"],
+    operating_income: ["Operating Income","OperatingIncome","Operating Income or Loss"],
+    ebitda: ["EBITDA","Normalized EBITDA"],
+    net_income: ["Net Income","NetIncome","Net Income Common Stockholders"],
+    interest_expense: ["Interest Expense","InterestExpense"],
+    total_assets: ["Total Assets","TotalAssets"],
+    current_assets: ["Total Current Assets","Current Assets","TotalCurrentAssets"],
+    cash: ["Cash And Cash Equivalents","Cash","Cash Cash Equivalents And Short Term Investments"],
+    inventory: ["Inventory"],
+    current_liabilities: ["Total Current Liabilities","Current Liabilities","TotalCurrentLiabilities"],
+    total_liabilities: ["Total Liabilities Net Minority Interest","Total Liab","Total Liabilities"],
+    total_debt: ["Total Debt","TotalDebt"],
+    total_equity: ["Stockholders Equity","Total Stockholder Equity","Common Stock Equity"],
+    operating_cf: ["Operating Cash Flow","Total Cash From Operating Activities","Cash Flow From Continuing Operating Activities"],
+    capex: ["Capital Expenditure","Capital Expenditures","CapitalExpenditure"],
+    free_cash_flow: ["Free Cash Flow","FreeCashFlow"],
+  };
+  function pickRow(rowsObj, key){
+    if(!rowsObj) return null;
+    const aliases = ROW_ALIASES[key] || [key];
+    const lowerMap = {};
+    Object.keys(rowsObj).forEach(k=>lowerMap[k.toLowerCase().trim()]=k);
+    for(const a of aliases){ const al=a.toLowerCase().trim(); if(lowerMap[al]) return rowsObj[lowerMap[al]]; }
+    for(const a of aliases){
+      const aTokens = new Set(a.toLowerCase().trim().split(' '));
+      for(const [low, real] of Object.entries(lowerMap)){
+        const lowTokens = new Set(low.split(' '));
+        let subset = true; aTokens.forEach(t=>{ if(!lowTokens.has(t)) subset=false; });
+        if(subset) return rowsObj[real];
+      }
+    }
+    return null;
+  }
+  function latest(arr){ if(!arr) return null; for(const v of arr){ if(v!=null && !isNaN(v)) return v; } return null; }
+  function safeDiv(a,b,mult=1){ if(a==null||b==null) return null; if(b===0) return null; return a/b*mult; }
+  function computeRatios(fin, info){
+    const income = fin.income?.rows, balance = fin.balance?.rows, cashflow = fin.cashflow?.rows;
+    const revenue = latest(pickRow(income,'total_revenue'));
+    const opInc = latest(pickRow(income,'operating_income'));
+    const netInc = latest(pickRow(income,'net_income'));
+    const totalAssets = latest(pickRow(balance,'total_assets'));
+    const totalDebt = latest(pickRow(balance,'total_debt'));
+    const equity = latest(pickRow(balance,'total_equity'));
+    const cash = latest(pickRow(balance,'cash')) || 0;
+    const opCf = latest(pickRow(cashflow,'operating_cf'));
+    let fcf = latest(pickRow(cashflow,'free_cash_flow'));
+    if(fcf==null){ const cx=latest(pickRow(cashflow,'capex')); if(opCf!=null && cx!=null) fcf = opCf + cx; }
+    const taxRate = 0.21;
+    const nopat = opInc!=null ? opInc*(1-taxRate) : null;
+    const out = {};
+    out.net_margin = safeDiv(netInc, revenue, 100);
+    out.fcf_margin = safeDiv(fcf, revenue, 100);
+    out.roe = safeDiv(netInc, equity, 100);
+    const investedCapital = (equity||0) + (totalDebt||0) - Math.min((cash||0),(totalDebt||0));
+    out.roic = safeDiv(nopat, investedCapital>0?investedCapital:null, 100);
+    out.debt_equity = safeDiv(totalDebt, equity);
+    out.equity_ratio = safeDiv(equity, totalAssets, 100);
+    out.pe = info?.trailingPE ?? null;
+    out.pb = info?.priceToBook ?? null;
+    out.ev_ebitda = info?.enterpriseToEbitda ?? null;
+    out.dividend_yield = (typeof info?.dividendYield==='number') ? info.dividendYield : null;
+    out.payout_ratio = info?.payoutRatio ? info.payoutRatio*100 : null;
+    return out;
+  }
+  function clip(v,lo=0,hi=100){ return Math.max(lo,Math.min(hi,v)); }
+  function scoreProfitability(r){ let s=0,n=0; if(r.net_margin!=null){s+=clip(50+r.net_margin*2);n++;} if(r.roe!=null){s+=clip(40+r.roe*2);n++;} if(r.roic!=null){s+=clip(40+r.roic*2.5);n++;} return n?s/n:50; }
+  function scoreLeverage(r){ const s=[]; if(r.debt_equity!=null){ if(r.debt_equity<0.3)s.push(90); else if(r.debt_equity<0.6)s.push(80); else if(r.debt_equity<1)s.push(65); else if(r.debt_equity<2)s.push(45); else s.push(25);} if(r.equity_ratio!=null) s.push(clip(r.equity_ratio+30)); return s.length?s.reduce((a,b)=>a+b,0)/s.length:50; }
+  function scoreEfficiency(r){ const s=[]; if(r.fcf_margin!=null) s.push(clip(50+r.fcf_margin*2.5)); return s.length?s.reduce((a,b)=>a+b,0)/s.length:50; }
+  function scoreValuation(r){ const s=[]; if(r.pe!=null&&r.pe>0){ if(r.pe<12)s.push(85); else if(r.pe<18)s.push(75); else if(r.pe<25)s.push(60); else if(r.pe<40)s.push(45); else s.push(25);} if(r.pb!=null&&r.pb>0){ if(r.pb<1.5)s.push(85); else if(r.pb<3)s.push(70); else if(r.pb<5)s.push(55); else s.push(35);} if(r.ev_ebitda!=null&&r.ev_ebitda>0){ if(r.ev_ebitda<10)s.push(85); else if(r.ev_ebitda<15)s.push(70); else if(r.ev_ebitda<25)s.push(55); else s.push(35);} return s.length?s.reduce((a,b)=>a+b,0)/s.length:50; }
+  function healthScore(r){
+    const profit = scoreProfitability(r), lev = scoreLeverage(r), eff = scoreEfficiency(r), val = scoreValuation(r);
+    return Math.round(profit*0.40 + lev*0.25 + eff*0.15 + val*0.20);
+  }
+
+  let rowsData = [];
+  let currentSector = null;
+
+  function fmtPct(n,d=1){ return n==null?'—':n.toFixed(d)+'%'; }
+  function fmtRatio(n,d=2){ return n==null?'—':n.toFixed(d); }
+  function scoreClass(v){ if(v==null) return ''; return v>=65?'score-green':v>=45?'score-gold':'score-red'; }
+  function avg(arr){ const v = arr.filter(x=>x!=null && isFinite(x)); return v.length ? v.reduce((a,b)=>a+b,0)/v.length : null; }
+
+  async function loadCache(){
+    try{
+      const res = await fetch(BILANZ_DATA_URL);
+      if(!res.ok) throw new Error('HTTP '+res.status);
+      const data = await res.json();
+      rowsData = Object.entries(data).filter(([sym,d])=>d.income && d.income.columns && d.income.columns.length).map(([sym,d])=>{
+        const info = { trailingPE:d.info?.trailingPE, dividendYield:d.info?.dividendYield, payoutRatio:d.info?.payoutRatio, priceToBook:d.info?.priceToBook, enterpriseToEbitda:d.info?.enterpriseToEbitda };
+        const ratios = computeRatios(d, info);
+        const score = healthScore(ratios);
+        const sector = (d.sector || d.info?.yahooSector || 'Unbekannt').trim() || 'Unbekannt';
+        return { symbol:sym, name:d.name, sector, index:d.index, score, ...ratios };
+      });
+      document.getElementById('cacheBadge').textContent = `● ${rowsData.length} Firmen gecacht`;
+      const indices = [...new Set(rowsData.map(r=>r.index))].sort();
+      const sel = document.getElementById('indexFilterSelect');
+      indices.forEach(idx=>{ const opt=document.createElement('option'); opt.value=idx; opt.textContent=idx; sel.appendChild(opt); });
+      renderSectors();
+    }catch(e){
+      document.getElementById('cacheBadge').textContent = '● Cache-Fehler';
+      document.getElementById('mainPanel').innerHTML = `<div class="loading-line">Cache konnte nicht geladen werden: ${e.message}</div>`;
+    }
+  }
+
+  window.onFilterChange = function(){ currentSector = null; renderSectors(); };
+
+  function filteredRows(){
+    const idx = document.getElementById('indexFilterSelect').value;
+    return idx==='ALL' ? rowsData : rowsData.filter(r=>r.index===idx);
+  }
+
+  function buildSectorAgg(rows){
+    const bySector = {};
+    rows.forEach(r=>{
+      if(!bySector[r.sector]) bySector[r.sector] = [];
+      bySector[r.sector].push(r);
+    });
+    return Object.entries(bySector).map(([sector, items])=>({
+      sector, count: items.length,
+      score: avg(items.map(i=>i.score)),
+      pe: avg(items.map(i=>i.pe)),
+      yield: avg(items.map(i=>i.dividend_yield)),
+      roe: avg(items.map(i=>i.roe)),
+      debtEquity: avg(items.map(i=>i.debt_equity)),
+      items,
+    }));
+  }
+
+  window.selectSector = function(sector){
+    currentSector = (currentSector===sector) ? null : sector;
+    renderSectors();
+  };
+
+  function renderSectors(){
+    const rows = filteredRows();
+    let aggs = buildSectorAgg(rows);
+    const sortKey = document.getElementById('sortSelect').value;
+    aggs.sort((a,b)=>{
+      if(sortKey==='count') return b.count-a.count;
+      if(sortKey==='pe') return (a.pe??999)-(b.pe??999);
+      if(sortKey==='yield') return (b.yield??-999)-(a.yield??-999);
+      if(sortKey==='roe') return (b.roe??-999)-(a.roe??-999);
+      return (b.score??0)-(a.score??0);
+    });
+    document.getElementById('countBadge').textContent = `${rows.length} Firmen · ${aggs.length} Sektoren`;
+
+    const cardsHtml = aggs.map(a=>`
+      <div class="sector-card ${currentSector===a.sector?'active':''}" onclick="selectSector('${a.sector.replace(/'/g,"\\'")}')">
+        <div class="sc-name">${a.sector}</div>
+        <div class="sc-count">${a.count} Firmen</div>
+        <div class="sc-score ${scoreClass(a.score)}">${a.score!=null?a.score.toFixed(0):'—'}</div>
+        <div class="sc-metrics">
+          <span>KGV <b>${fmtRatio(a.pe,1)}</b></span>
+          <span>Yield <b>${fmtPct(a.yield)}</b></span>
+          <span>ROE <b>${fmtPct(a.roe)}</b></span>
+        </div>
+      </div>
+    `).join('');
+
+    let drillHtml = '';
+    if(currentSector){
+      const agg = aggs.find(a=>a.sector===currentSector);
+      const items = [...agg.items].sort((a,b)=>(b.score??0)-(a.score??0));
+      drillHtml = `
+        <div class="panel-block">
+          <h3>${currentSector} — ${items.length} Firmen im Detail</h3>
+          <table>
+            <thead><tr><th>Symbol</th><th>Name</th><th>Index</th><th>Score</th><th>KGV</th><th>ROE</th><th>Debt/Eq.</th><th>Yield</th></tr></thead>
+            <tbody>
+              ${items.map(i=>`<tr><td>${i.symbol}</td><td>${i.name}</td><td>${i.index}</td>
+                <td><span class="score-pill ${scoreClass(i.score)}">${i.score}</span></td>
+                <td>${fmtRatio(i.pe,1)}</td><td>${fmtPct(i.roe)}</td><td>${fmtRatio(i.debt_equity)}</td><td>${fmtPct(i.dividend_yield)}</td></tr>`).join('')}
+            </tbody>
+          </table>
+        </div>
+      `;
+    }
+
+    document.getElementById('mainPanel').innerHTML = `
+      <div class="sector-grid">${cardsHtml}</div>
+      ${drillHtml}
+      <div class="panel-block">
+        <div class="disclaimer">Reine Cache-Auswertung — keine Live-Abfrage. Health-Score/Ratios 1:1 aus dem Bilanz-Terminal übernommen (vereinfachte Gewichtung: Profitabilität 40%, Verschuldung 25%, Effizienz 15%, Bewertung 20% — ohne Liquiditäts-Sub-Score, da Cash-Ratio-Daten nicht für alle 16 Indizes vollständig vorliegen). Sektor-Zuordnung kommt aus Wikipedia-Konstituentenlisten bzw. Yahoo-Firmenprofil, nicht standardisiert (GICS vs. ICB vs. lokale Klassifikation) — Vergleich zwischen Ländern daher grob. Keine Anlageberatung.</div>
+      </div>
+    `;
+  }
+
+  loadCache();
+</script>
+</body>
+</html>
